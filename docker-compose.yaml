@@ -1,0 +1,70 @@
+version: '3'
+services:
+
+  # Elastiflow Collector
+  collector:
+    image: elastiflow/flow-collector:5.4.1
+    container_name: collector
+    restart: 'unless-stopped'
+    network_mode: 'host'
+    volumes:
+      - ./data/collector:/etc/elastiflow
+
+    depends_on:
+      - elasticsearch
+
+    environment:
+      # These are some common options so we put them here.
+      # Extended config is in elastiflow.env for enrichments.
+      EF_FLOW_SERVER_UDP_IP: '0.0.0.0'
+      EF_FLOW_SERVER_UDP_PORT: 9995
+      EF_FLOW_DECODER_NETFLOW5_ENABLE: 'true'
+      
+
+    env_file:
+      - elastiflow.env
+
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+    healthcheck:
+      test: curl -u elastic:elastic -s -f elasticsearch:9200/_cat/health >/dev/null || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+    environment:
+      - xpack.security.enabled=false
+      - "discovery.type=single-node"
+    env_file:
+      - elasticsearch.env
+    networks:
+      - es-net
+    ports:
+      - 9200:9200
+  
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.11.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - es-net
+    depends_on:
+      - elasticsearch
+    ports:
+      - 5601:5601
+
+networks:
+  es-net:
+    driver: bridge
+

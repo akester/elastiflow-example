@@ -1,0 +1,17 @@
+[Unit]
+Description=Elastiflow
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+
+WorkingDirectory=/opt/elastiflow
+
+ExecStartPre=/usr/bin/docker-compose down -v
+ExecStart=/bin/bash /opt/elastiflow/start.sh
+
+ExecStop=/usr/bin/docker-compose down -v
+
+[Install]
+WantedBy=multi-user.target
